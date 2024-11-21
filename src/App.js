@@ -9,7 +9,7 @@ import WebFont from 'webfontloader';
 import { Routes, Route } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
-const clientId = '807683035814-jhd5tkkio32lhdaq04b2h63kdceoohnn.apps.googleusercontent.com'; // Replace with your actual Client ID
+const clientId = process.env.CLIENT_ID; // Replace with your actual Client ID
 
 function App() {
   useEffect(() => {

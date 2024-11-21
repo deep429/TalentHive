@@ -30,12 +30,12 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyB-F93tmALJ6dZd72pQbBfRBe3gdaAbFyo",
-  authDomain: "talenthive-c8bfa.firebaseapp.com",
-  projectId: "talenthive-c8bfa",
-  storageBucket: "talenthive-c8bfa.firebasestorage.app",
-  messagingSenderId: "807683035814",
-  appId: "1:807683035814:web:e59f14ad23892d1fca9a67"
+    apiKey: process.env.API_KEY,
+    authDomain: process.env.AUTH_DOMAIN,
+    projectId: process.env.PROJECT_ID,
+    storageBucket: process.env.STORAGE_BUCKET,
+    messagingSenderId: process.env.MESSAGING_SENDER_ID,
+    appId: process.env.APP_ID
 };
 
 // Initialize Firebase
