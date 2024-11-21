@@ -1,14 +1,17 @@
 import { useEffect } from 'react';
-import { ResumeProvider } from './Context';
 import './App.css';
-import Header from './components/Layouts/Header';
-import Navbar from './components/Layouts/Navbar';
-import Footer from './components/Layouts/Footer';
-import Main from './components/Main';
+import Home from './components/Home';
+import About from './components/Aboutpage';
+import Login from './components/LoginPage';
+import SignUp from './components/SignUp';
+import Forgot from './components/ForgotPasswordPage';
 import WebFont from 'webfontloader';
+import { Routes, Route } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
+const clientId = '807683035814-jhd5tkkio32lhdaq04b2h63kdceoohnn.apps.googleusercontent.com'; // Replace with your actual Client ID
 
 function App() {
-
   useEffect(() => {
     WebFont.load({
       google: {
@@ -18,14 +21,15 @@ function App() {
   }, []);
 
   return (
-    <>
-      <ResumeProvider>
-        <Navbar />
-        <Header />
-        <Main />
-        <Footer />
-      </ResumeProvider>
-    </>
+    <GoogleOAuthProvider clientId={clientId}>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/forgot-password" element={<Forgot />} />
+      </Routes>
+    </GoogleOAuthProvider>
   );
 }
 

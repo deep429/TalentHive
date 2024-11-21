@@ -20,6 +20,7 @@ import {
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { Link } from 'react-router-dom';
 
 // Set the worker source for pdf.js
 GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`; // Use the version you want
@@ -70,8 +71,9 @@ const Navbar = () => {
                 <Spacer></Spacer>
                 <HStack spacing={10} mr={{ base: 0, sm: 8 }} as='nav' style={{ fontFamily: 'Poppins' }}>
                     <Text as='a' href='#' fontSize='lg'>Home</Text>
-                    <Text as='a' href='#' fontSize='lg'>About</Text>
+                    <Link to="/about">About</Link>
                     <Button colorScheme={'purple'} fontWeight={'medium'} onClick={handleOpen}>Upload PDF</Button>
+                    <Link to="/login"><Button colorScheme={'green'} fontWeight={'medium'} >Login</Button></Link>
                 </HStack>
             </Flex>
 

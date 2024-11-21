@@ -31,7 +31,7 @@ const Header = () => {
                         </Heading>
 
                         <Text color={'gray.600'} lineHeight={1.7} style={{ fontFamily: 'Poppins' }}>
-                            PlacementSathi is a tool that often constitutes an automated process in which you follow a template and input your information. Ability to build, print, and download your resume for free in minutes.
+                        TalentHive is a tool that often constitutes an automated process in which you follow a template and input your information. Ability to build, print, and download your resume for free in minutes.
                         </Text>
                         <Stack
                             spacing={{ base: 4, sm: 6 }}
