@@ -70,28 +70,12 @@ const LoginPage = () => {
     }
   };
 
-  const handleForgotPassword = async (e) => {
-    e.preventDefault();
-
-    const email = emailInputRef.current.value;
-
-    try {
-      await sendPasswordResetEmail(auth, email);
-      console.log('Password reset email sent successfully');
-      setError('Password reset email sent. Check your inbox.');
-      navigate('/login');
-    } catch (error) {
-      console.error('Error sending reset email:', error.message);
-      setError('Error sending reset email. Please try again.');
-    }
-  };
-
   return (
     <Flex minHeight="100vh" align="center" justify="center" bg="gray.50" p={5} position="relative">
       <IconButton
         icon={<ArrowBackIcon />}
         aria-label="Go back"
-        onClick={() => navigate(-1)}
+        onClick={() => navigate('/')}
         variant="outline"
         colorScheme="purple"
         position="absolute"
