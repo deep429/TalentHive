@@ -10,7 +10,7 @@ import {
   UnorderedList,
   ListItem,
 } from "@chakra-ui/react";
-import { useResume } from "../Context";
+import { useResume } from "../../Context";
 import { MdMail, MdLocalPhone, MdLocationPin } from "react-icons/md";
 import { RiLinkedinBoxFill } from "react-icons/ri";
 import { BiLinkExternal } from "react-icons/bi";

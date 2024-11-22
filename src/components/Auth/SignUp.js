@@ -9,10 +9,11 @@ import {
   Button,
   Text,
   Box,
+  useToast, // Import useToast
 } from '@chakra-ui/react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from './Auth/firebase'; // Ensure this is your Firebase configuration file
+import { auth } from './firebase'; // Ensure this is your Firebase configuration file
 
 const SignUp = () => {
   const [email, setEmail] = useState('');
@@ -22,6 +23,7 @@ const SignUp = () => {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const toast = useToast(); // Initialize useToast hook
 
   const handleSignUp = async (e) => {
     e.preventDefault();
@@ -38,9 +40,27 @@ const SignUp = () => {
       console.log('Sign up successful for:', userCredential.user);
       setError('');
       navigate('/login'); // Redirect to login page after successful sign-up
+
+      // Display success toast notification
+      toast({
+        title: 'Sign Up Successful',
+        description: 'Your account has been created. You can now log in.',
+        status: 'success',
+        duration: 4000,
+        isClosable: true,
+      });
     } catch (error) {
       console.error('Error creating user:', error.message);
       setError(handleFirebaseError(error.code));
+
+      // Display error toast notification
+      toast({
+        title: 'Sign Up Failed',
+        description: handleFirebaseError(error.code),
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
     } finally {
       setLoading(false);
     }

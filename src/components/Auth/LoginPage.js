@@ -12,16 +12,17 @@ import {
   Checkbox,
   IconButton,
   Link as ChakraLink,
+  useToast, // Import useToast hook
 } from '@chakra-ui/react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowBackIcon } from '@chakra-ui/icons';
-import { GoogleLogin, getAuthResult } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import {
   signInWithEmailAndPassword,
   signInWithCredential,
-  sendPasswordResetEmail,
+  GoogleAuthProvider,
 } from 'firebase/auth';
-import { auth } from './Auth/firebase'; // Ensure this is your Firebase configuration file
+import { auth } from './firebase'; // Ensure this is your Firebase configuration file
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -30,18 +31,28 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const toast = useToast(); // Initialize useToast hook
 
   const emailInputRef = useRef(null);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-  
+
     try {
       await signInWithEmailAndPassword(auth, email, password);
       console.log('Login successful');
-      navigate('/');
-  
+      navigate('/dashboard');
+
+      // Display success toast notification
+      toast({
+        title: 'Login Successful',
+        description: 'You have successfully logged in.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+
       // Store email in local storage if checkbox is checked
       if (isChecked) {
         localStorage.setItem('rememberedEmail', email);
@@ -50,6 +61,15 @@ const LoginPage = () => {
       }
     } catch (error) {
       setError(error.message);
+
+      // Display error toast notification
+      toast({
+        title: 'Login Failed',
+        description: error.message,
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     } finally {
       setLoading(false);
     }
@@ -60,13 +80,37 @@ const LoginPage = () => {
   const handleGoogleLogin = async (response) => {
     try {
       const credential = response.credential;
-      const userCredential = await signInWithCredential(auth, credential);
+      if (!credential) {
+        throw new Error('No credential found');
+      }
+
+      // Use the GoogleAuthProvider to sign in with the Google credential
+      const providerCredential = GoogleAuthProvider.credential(credential);
+      
+      const userCredential = await signInWithCredential(auth, providerCredential);
 
       console.log('Google login successful:', userCredential.user);
-      navigate('/');
+      navigate('/dashboard');
+
+      // Display success toast notification for Google login
+      toast({
+        title: 'Google Login Successful',
+        description: 'You have logged in using your Google account.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (error) {
       console.error('Error during Google login:', error.message);
-      setError(error.message);
+
+      // Display error toast notification for Google login
+      toast({
+        title: 'Google Login Failed',
+        description: error.message,
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
@@ -126,7 +170,7 @@ const LoginPage = () => {
             />
           </Flex>
           <Flex mt={4} justifyContent="space-between">
-            <ChakraLink as={Link} to="/forgot-password" color="purple.500" >
+            <ChakraLink as={Link} to="/forgot-password" color="purple.500">
               Forgot Password?
             </ChakraLink>
             <ChakraLink as={Link} to="/signup" color="purple.500">

@@ -1,11 +1,11 @@
 import { TabList, Tabs, Tab, TabPanels, TabPanel, Box, Text } from '@chakra-ui/react'
 import React, { useEffect } from 'react'
-import { useResume } from '../Context'
-import About from './BuildSteps/About'
-import Education from './BuildSteps/Education'
-import Projects from './BuildSteps/Projects'
-import Skills from './BuildSteps/Skills'
-import Work from './BuildSteps/Work'
+import { useResume } from '../../Context'
+import About from './About'
+import Education from './Education'
+import Projects from './Projects'
+import Skills from './Skills'
+import Work from './Work'
 
 const Builder = () => {
 

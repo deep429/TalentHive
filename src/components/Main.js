@@ -13,8 +13,8 @@ import { useReactToPrint } from 'react-to-print';
 import { MdOutlineFileDownload } from 'react-icons/md';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import Builder from './Builder';
-import ResumePreview from './ResumePreview';
+import Builder from './BuildSteps/Builder';
+import ResumePreview from './BuildSteps/ResumePreview';
 import ThemeSelect from './Theme/ThemeSelect'; // Component for theme selection
 import { useResume } from '../Context'; // Custom hook for Resume context
 
