@@ -31,21 +31,20 @@ const ForgotPasswordPage = () => {
   const emailInputRef = useRef(null);
 
   const navigate = useNavigate();
-  const toast = useToast(); // Initialize useToast hook
+  const toast = useToast(); 
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setSuccess(''); // Clear previous success message
+    setSuccess(''); 
 
     try {
       await sendPasswordResetEmail(auth, email);
       setSuccess('Password reset email sent. Check your inbox.');
       setLoading(false);
-      navigate('/login'); // Redirect to login page after success
-
-      // Display success toast notification
+      navigate('/login'); 
+      
       toast({
         title: 'Email Sent',
         description: 'Password reset email has been sent. Please check your inbox.',

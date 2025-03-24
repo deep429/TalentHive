@@ -81,7 +81,7 @@ const Navbar = () => {
             </Text>
           </Link>
           <Button colorScheme={'purple'} fontWeight={'medium'} onClick={handleOpen}>Upload PDF</Button>
-          <Link to="/login"><Button colorScheme={'green'} fontWeight={'medium'} >Login</Button></Link>
+          <Link to="/user"><Button colorScheme={'green'} fontWeight={'medium'} >Login</Button></Link>
         </HStack>
       </Flex>
 

@@ -42,8 +42,9 @@ const LoginPage = () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       console.log('Login successful');
-      navigate('/dashboard');
+      navigate('/admindash');
 
+      // Display success toast notification
       toast({
         title: 'Login Successful',
         description: 'You have successfully logged in.',
@@ -52,6 +53,7 @@ const LoginPage = () => {
         isClosable: true,
       });
 
+      // Store email in local storage if checkbox is checked
       if (isChecked) {
         localStorage.setItem('rememberedEmail', email);
       } else {
@@ -59,7 +61,8 @@ const LoginPage = () => {
       }
     } catch (error) {
       setError(error.message);
-      
+
+      // Display error toast notification
       toast({
         title: 'Login Failed',
         description: error.message,
@@ -81,13 +84,15 @@ const LoginPage = () => {
         throw new Error('No credential found');
       }
 
+      // Use the GoogleAuthProvider to sign in with the Google credential
       const providerCredential = GoogleAuthProvider.credential(credential);
       
       const userCredential = await signInWithCredential(auth, providerCredential);
 
       console.log('Google login successful:', userCredential.user);
-      navigate('/dashboard');
+      navigate('/admindash');
 
+      // Display success toast notification for Google login
       toast({
         title: 'Google Login Successful',
         description: 'You have logged in using your Google account.',
@@ -97,6 +102,8 @@ const LoginPage = () => {
       });
     } catch (error) {
       console.error('Error during Google login:', error.message);
+
+      // Display error toast notification for Google login
       toast({
         title: 'Google Login Failed',
         description: error.message,

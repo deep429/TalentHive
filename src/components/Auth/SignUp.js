@@ -39,9 +39,8 @@ const SignUp = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       console.log('Sign up successful for:', userCredential.user);
       setError('');
-      navigate('/login'); // Redirect to login page after successful sign-up
+      navigate('/login'); 
 
-      // Display success toast notification
       toast({
         title: 'Sign Up Successful',
         description: 'Your account has been created. You can now log in.',

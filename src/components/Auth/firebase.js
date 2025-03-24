@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getStorage } from "firebase/storage"; // Import Firebase Storage
+import { getStorage } from "firebase/storage"; 
+import { getFirestore } from "firebase/firestore"; 
 
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_API_KEY,
@@ -11,11 +12,9 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_APP_ID,
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const storage = getStorage(app); 
+const firestore = getFirestore(app); 
 
-// Initialize Firebase Storage
-const storage = getStorage(app); // This gives you access to Firebase Storage
-
-export { auth, storage };
+export { auth, storage, firestore }; 

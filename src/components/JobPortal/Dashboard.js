@@ -3,9 +3,6 @@ import {
   Box,
   Heading,
   Text,
-  Grid,
-  GridItem,
-  Button,
   Flex,
   VStack,
   HStack,
@@ -13,6 +10,7 @@ import {
   Badge,
   Spacer,
   Divider,
+  Button,
   useToast,
   useDisclosure,
   Modal,
@@ -22,38 +20,112 @@ import {
   ModalBody,
   ModalFooter,
   ModalCloseButton,
-  FormControl,
-  FormLabel,
+  Skeleton,
+  IconButton,
+  Collapse,
   Input,
+  FormLabel,
+  FormControl,
 } from '@chakra-ui/react';
-import { useNavigate } from 'react-router-dom'; // Assuming React Router is used
-import { FiLogOut, FiBriefcase, FiUsers, FiSettings, FiClipboard } from 'react-icons/fi';
-import { auth } from '../Auth/firebase'; 
+import { useNavigate } from 'react-router-dom';
+import { FiLogOut, FiBriefcase, FiClipboard, FiSettings, FiExternalLink, FiChevronDown, FiChevronUp, FiUpload } from 'react-icons/fi';
+import { auth } from '../Auth/firebase';
 
 const Dashboard = () => {
   const toast = useToast();
   const navigate = useNavigate();
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [resume, setResume] = useState(null);
-  const [user, setUser] = useState(null); // State to store user data
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [recentJobs, setRecentJobs] = useState([]);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [resumeUrl, setResumeUrl] = useState(null);
+  const { isOpen: isFetchOpen, onOpen: onFetchOpen, onClose: onFetchClose } = useDisclosure();
+  const [resumeFile, setResumeFile] = useState(null);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
-        setUser(currentUser); // Set the user details from Firebase
-        setLoading(false); // Stop loading when the user is fetched
+        setUser(currentUser);
+        setLoading(false);
+        fetchResume(currentUser.uid);
       } else {
         setLoading(false);
-        navigate('/login'); // Redirect if not logged in
+        navigate('/login');
       }
     });
-
-    return () => unsubscribe(); // Clean up the listener on unmount
+    return () => unsubscribe();
   }, [navigate]);
 
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/jobs', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!response.ok) throw new Error('Failed to fetch jobs');
+        const jobs = await response.json();
+        setRecentJobs(jobs);
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to load recent jobs.',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    };
+    fetchJobs();
+  }, [toast]);
+
+  const handleApplyJob = async () => {
+    if (!selectedJob) return;
+
+    try {
+        const response = await fetch('http://localhost:5000/api/apply', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                userId: user.uid,
+                studentName: user.displayName,
+                jobTitle: selectedJob.jobTitle,
+                companyName: selectedJob.companyName,
+                resumeUrl: resumeUrl,
+                profilePictureUrl: user.photoURL,
+                email: user.email, 
+            }),
+        });
+
+        if (!response.ok) throw new Error('Failed to apply for job');
+
+        toast({
+            title: `Applied for ${selectedJob.jobTitle}`,
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+        });
+        setSelectedJob(null);
+    } catch (error) {
+        toast({
+            title: 'Application Failed',
+            description: error.message,
+            status: 'error',
+            duration: 3000,
+            isClosable: true,
+        });
+    }
+};
+
   const handleLogout = () => {
-    localStorage.removeItem('authToken');
+    auth.signOut();
     toast({
       title: 'Logged out successfully.',
       status: 'success',
@@ -63,58 +135,116 @@ const Dashboard = () => {
     navigate('/login');
   };
 
-  const handleEditProfile = () => {
+  const OpenEdit = () => {
     navigate('/edit-profile');
   };
 
-  const handleApplyJob = (jobTitle) => {
-    toast({
-      title: `Applied for ${jobTitle}`,
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-  };
-
-  const handleResumeUpload = (event) => {
-    const file = event.target.files[0];
-    if (file && file.type === 'application/pdf') {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setResume(reader.result);
-        toast({
-          title: 'Resume uploaded successfully.',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-      };
-      reader.readAsDataURL(file);
-    } else {
-      toast({
-        title: 'Invalid File',
-        description: 'Please upload a PDF file.',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
+  const fetchResume = async (userId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/resume/${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.resume) {
+          setResumeUrl(`http://localhost:5000/${data.resume.path}`); // Construct full URL
+        } else {
+          setResumeUrl(null);
+        }
+      } else {
+        console.error('Failed to fetch resume:', response.statusText);
+        setResumeUrl(null);
+      }
+    } catch (error) {
+      console.error('Error fetching resume:', error);
+      setResumeUrl(null);
     }
   };
 
-  const recentJobs = [
-    { id: 1, title: 'Frontend Developer', company: 'Tech Corp', location: 'Remote', type: 'Full-Time' },
-    { id: 2, title: 'Backend Engineer', company: 'Code Works', location: 'San Francisco, CA', type: 'Part-Time' },
-    { id: 3, title: 'UI/UX Designer', company: 'Creative Studio', location: 'New York, NY', type: 'Contract' },
-  ];
+  const handleResumeUploadClick = () => {
+    setUploadModalOpen(true);
+  };
 
-  if (loading) return <Box>Loading...</Box>; // Optional: Loading state
+  const handleResumeFileChange = (e) => {
+    setResumeFile(e.target.files[0]);
+  };
+
+  const handleResumeUpload = async () => {
+    setIsUploading(true);
+    try {
+        // Step 1: Delete old resume if it exists
+        if (resumeUrl) {
+            const deleteResponse = await fetch(`http://localhost:5000/api/delete-resume/${user.uid}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!deleteResponse.ok) {
+                throw new Error('Failed to delete old resume.');
+            }
+        }
+
+        // Step 2: Upload new resume
+        const formData = new FormData();
+        formData.append('resume', resumeFile);
+        formData.append('userId', user.uid);
+
+        const uploadResponse = await fetch('http://localhost:5000/api/upload-resume', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (uploadResponse.ok) {
+            toast({
+                title: 'Resume Uploaded!',
+                description: 'Your resume has been uploaded successfully.',
+                status: 'success',
+                duration: 3000,
+                isClosable: true,
+            });
+            setUploadModalOpen(false);
+            setResumeFile(null); // Clear the selected file
+            fetchResume(user.uid); // Refresh resume URL
+        } else {
+            const errorData = await uploadResponse.json();
+            throw new Error(errorData.message || 'Error uploading your resume.');
+        }
+    } catch (error) {
+        console.error('Upload error:', error);
+        toast({
+            title: 'Upload Failed',
+            description: error.message || 'Network error or server issue.',
+            status: 'error',
+            duration: 3000,
+            isClosable: true,
+        });
+    } finally {
+        setIsUploading(false);
+    }
+};
+
+  if (loading) {
+    return (
+      <Box p={6}>
+        <Skeleton height="40px" mb={4} />
+        <Skeleton height="20px" mb={2} />
+        <Skeleton height="20px" mb={2} />
+        <Skeleton height="20px" mb={2} />
+      </Box>
+    );
+  }
 
   return (
     <Flex minHeight="100vh" bg="gray.100">
       {/* Sidebar */}
-      <Box w="20%" bg="green.200" color="black" p={5}>
+      <Box w="20%" h="100vh" position="fixed" top="0" left="0" bgGradient="linear(to-b, purple.500, purple.700)" color="white" p={5} display="flex" flexDirection="column" justifyContent="space-between">
         <VStack spacing={6} align="start">
-          <Flex align="center" onClick={handleEditProfile} cursor="pointer">
+          <Flex align="center" onClick={OpenEdit} cursor="pointer">
             <Avatar size="lg" src={user?.photoURL} />
             <Box ml={4}>
               <Text fontWeight="bold">{user?.displayName}</Text>
@@ -122,153 +252,69 @@ const Dashboard = () => {
             </Box>
           </Flex>
           <Divider borderColor="purple.400" />
-          <Button
-            leftIcon={<FiBriefcase />}
-            variant="ghost"
-            justifyContent="start"
-            w="100%"
-          >
+          <Button leftIcon={<FiBriefcase />} variant="ghost" justifyContent="start" w="100%">
             Dashboard
           </Button>
-          <Button
-            leftIcon={<FiUsers />}
-            variant="ghost"
-            justifyContent="start"
-            w="100%"
-          >
-            Networking
-          </Button>
-          <Button
-            leftIcon={<FiClipboard />}
-            variant="ghost"
-            justifyContent="start"
-            w="100%"
-          >
+          <Button leftIcon={<FiClipboard />} variant="ghost" justifyContent="start" w="100%" onClick={() => navigate('/job-application')}>
             Applications
           </Button>
-          <Button
-            leftIcon={<FiSettings />}
-            variant="ghost"
-            justifyContent="start"
-            w="100%"
-          >
-            Settings
+          <Button leftIcon={<FiUpload />} variant="ghost" justifyContent="start" w="100%" onClick={handleResumeUploadClick}>
+            Upload Your Resume
           </Button>
+          {resumeUrl && (
+            <Button leftIcon={<FiExternalLink />} variant="ghost" justifyContent="start" w="100%" as="a" href={resumeUrl} target="_blank" rel="noopener noreferrer">
+              View Resume
+            </Button>
+          )}
           <Spacer />
-          <Button
-            leftIcon={<FiLogOut />}
-            variant="ghost"
-            justifyContent="start"
-            w="100%"
-            onClick={onOpen}
-          >
+          <Button leftIcon={<FiLogOut />} variant="ghost" justifyContent="start" w="100%" onClick={onOpen}>
             Logout
           </Button>
         </VStack>
       </Box>
 
       {/* Main Content */}
-      <Box w="80%" p={6}>
-        <Heading mb={6} color="purple.600">
+      <Box w="80%" p={6} ml="20%">
+        <Heading mb={6} color="purple.700">
           Job Portal Dashboard
         </Heading>
 
-        {/* Statistics Section */}
-        <Grid templateColumns="repeat(3, 1fr)" gap={6} mb={6}>
-          <GridItem>
-            <Box p={5} shadow="md" borderWidth="1px" bg="white" borderRadius="lg">
-              <Heading size="md">Jobs Applied</Heading>
-              <Text mt={2} fontSize="xl" fontWeight="bold" color="purple.600">
-                24
-              </Text>
-            </Box>
-          </GridItem>
-          <GridItem>
-            <Box p={5} shadow="md" borderWidth="1px" bg="white" borderRadius="lg">
-              <Heading size="md">Interviews Scheduled</Heading>
-              <Text mt={2} fontSize="xl" fontWeight="bold" color="purple.600">
-                5
-              </Text>
-            </Box>
-          </GridItem>
-          <GridItem>
-            <Box p={5} shadow="md" borderWidth="1px" bg="white" borderRadius="lg">
-              <Heading size="md">Connections</Heading>
-              <Text mt={2} fontSize="xl" fontWeight="bold" color="purple.600">
-                78
-              </Text>
-            </Box>
-          </GridItem>
-        </Grid>
-
-        {/* Recent Jobs Section */}
+        {/* Recent Jobs */}
         <Box mb={6}>
           <Heading size="md" mb={4}>
             Recent Job Listings
           </Heading>
-          <Box bg="white" p={5} shadow="md" borderRadius="lg">
-            {recentJobs.map((job) => (
-              <Flex key={job.id} mb={4} align="center">
-                <Box>
-                  <Text fontWeight="bold">{job.title}</Text>
-                  <Text fontSize="sm">{job.company}</Text>
-                  <HStack spacing={3} mt={2}>
-                    <Badge colorScheme="purple">{job.location}</Badge>
-                    <Badge colorScheme="green">{job.type}</Badge>
-                  </HStack>
-                </Box>
-                <Spacer />
-                <Button
-                  size="sm"
-                  colorScheme="purple"
-                  onClick={() => handleApplyJob(job.title)}
-                >
-                  Apply
-                </Button>
-              </Flex>
-            ))}
-          </Box>
-        </Box>
-
-        {/* Profile Management Section */}
-        <Box>
-          <Heading size="md" mb={4}>
-            Profile Management
-          </Heading>
-          <Grid templateColumns="repeat(2, 1fr)" gap={6}>
-            <GridItem>
-              <Box p={5} shadow="md" borderWidth="1px" bg="white" borderRadius="lg">
-                <Heading size="sm">Update Profile</Heading>
-                <Text mt={2}>Keep your profile up-to-date to get better recommendations.</Text>
-                <Button
-                  mt={4}
-                  colorScheme="purple"
-                  size="sm"
-                  onClick={handleEditProfile}
-                >
-                  Edit Profile
-                </Button>
-              </Box>
-            </GridItem>
-            <GridItem>
-              <Box p={5} shadow="md" borderWidth="1px" bg="white" borderRadius="lg">
-                <Heading size="sm">Upload Resume</Heading>
-                <Text mt={2}>Upload the latest version of your resume.</Text>
-                <Button mt={4} colorScheme="purple" size="sm" onClick={() => document.getElementById('resume-upload').click()}>
-                  Upload
-                </Button>
-                <Input
-                  id="resume-upload"
-                  type="file"
-                  accept=".pdf"
-                  hidden
-                  onChange={handleResumeUpload}
-                />
-              </Box>
-            </GridItem>
-          </Grid>
+          <VStack spacing={4} align="stretch">
+            {recentJobs.length === 0 ? (
+              <Text>No jobs available.</Text>
+            ) : (
+              recentJobs.map((job) => (
+                <JobListItem key={job._id} job={job} onApply={() => setSelectedJob(job)} />
+              ))
+            )}
+          </VStack>
         </Box>
       </Box>
+
+      {/* Apply Confirmation Modal */}
+      <Modal isOpen={!!selectedJob} onClose={() => setSelectedJob(null)}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Apply for {selectedJob?.jobTitle}</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Text>Are you sure you want to apply for this job at {selectedJob?.companyName}?</Text>
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="purple" mr={3} onClick={handleApplyJob}>
+              Apply
+            </Button>
+            <Button variant="ghost" onClick={() => setSelectedJob(null)}>
+              Cancel
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       {/* Logout Confirmation Modal */}
       <Modal isOpen={isOpen} onClose={onClose}>
@@ -289,7 +335,68 @@ const Dashboard = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      {/* Upload Resume Modal */}
+      <Modal isOpen={uploadModalOpen} onClose={() => setUploadModalOpen(false)}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Upload Your Resume</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <FormControl>
+              <FormLabel htmlFor="resume">Choose File</FormLabel>
+              <Input type="file" id="resume" accept=".pdf,.doc,.docx" onChange={handleResumeFileChange} />
+            </FormControl>
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="purple" mr={3} onClick={handleResumeUpload} isLoading={isUploading} disabled={!resumeFile}>
+              Upload
+            </Button>
+            <Button variant="ghost" onClick={() => setUploadModalOpen(false)}>
+              Cancel
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Flex>
+  );
+};
+
+const JobListItem = ({ job, onApply }) => {
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const descriptionLengthThreshold = 200;
+  const hasLongDescription = job.jobDescription && job.jobDescription.length > descriptionLengthThreshold;
+
+  const toggleDescription = () => {
+    setShowFullDescription(!showFullDescription);
+  };
+
+  return (
+    <Box bg="white" p={5} shadow="md" borderRadius="lg">
+      <Flex justify="space-between" align="center" mb={2}>
+        <Box>
+          <Heading size="md">{job.jobTitle}</Heading>
+          <Text fontSize="sm" color="gray.600">{job.companyName}</Text>
+        </Box>
+        <IconButton aria-label="Apply for job" icon={<FiExternalLink />} size="sm" colorScheme="purple" onClick={onApply} />
+      </Flex>
+      <HStack spacing={3} mt={2}>
+        <Badge colorScheme="blue">{job.jobType}</Badge>
+        <Badge colorScheme="green">{job.salaryRange}</Badge>
+      </HStack>
+      {job.jobDescription && (
+        <Box mt={4}>
+          <Text fontSize="sm" color="gray.700" noOfLines={showFullDescription ? undefined : 3}>
+            {job.jobDescription}
+          </Text>
+          {hasLongDescription && (
+            <Button size="sm" variant="link" colorScheme="purple" onClick={toggleDescription}>
+              {showFullDescription ? 'See Less' : 'See More'}
+            </Button>
+          )}
+        </Box>
+      )}
+    </Box>
   );
 };
 
