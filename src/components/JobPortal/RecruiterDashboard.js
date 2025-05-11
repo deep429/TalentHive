@@ -222,10 +222,14 @@ const RecruiterDashboard = () => {
                     >
                         View Applications
                     </Button>
-                </VStack>
-                <Button leftIcon={<FiLogOut />} variant="ghost" justifyContent="start" w="100%" onClick={openLogoutModal}>
+                    <Spacer>
+                        
+                    </Spacer>
+                     <Button leftIcon={<FiLogOut />} variant="ghost" justifyContent="start" w="100%" onClick={openLogoutModal}>
                     Logout
                 </Button>
+                </VStack>
+               
             </Box>
 
             {/* Main Content */}

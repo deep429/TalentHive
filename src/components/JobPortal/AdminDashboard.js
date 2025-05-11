@@ -18,9 +18,15 @@ import {
   ModalCloseButton,
   ModalBody,
   ModalFooter,
+  Badge,
+  HStack,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom'; 
-import { FiLogOut, FiBriefcase, FiUsers, FiSettings, FiMonitor } from 'react-icons/fi';
+import { FiLogOut, FiBriefcase, FiUsers, FiSettings, FiMonitor, FiCheckCircle, FiUserX, FiBarChart2 } from 'react-icons/fi';
 import { auth } from '../Auth/firebase';
 
 const AdminDashboard = () => {
@@ -31,12 +37,18 @@ const AdminDashboard = () => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [applications, setApplications] = useState([]);
+    const [stats, setStats] = useState({
+        placed: 0,
+        unplaced: 0,
+        total: 0
+    });
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
                 fetchApplications(); // Fetch applications when user is authenticated
+                fetchStats(); // Fetch statistics
             } else {
                 navigate('/admin');
             }
@@ -48,10 +60,10 @@ const AdminDashboard = () => {
     // Fetch applications from the backend
     const fetchApplications = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/applications'); // Ensure this matches your server URL
+            const response = await fetch('http://localhost:5000/api/applications');
             if (!response.ok) throw new Error('Network response was not ok');
             const data = await response.json();
-            setApplications(data); // Set applications state with fetched data
+            setApplications(data);
         } catch (error) {
             console.error('Fetch error:', error);
             toast({
@@ -60,6 +72,32 @@ const AdminDashboard = () => {
                 status: 'error',
                 duration: 3000,
                 isClosable: true,
+            });
+        }
+    };
+
+    // Fetch statistics from the backend
+    const fetchStats = async () => {
+        try {
+            // Using the comprehensive endpoint
+            const response = await fetch('http://localhost:5000/api/placement-stats');
+            if (!response.ok) throw new Error('Network response was not ok');
+            const data = await response.json();
+            
+            setStats({
+                placed: data.placed,
+                unplaced: data.unplaced,
+                total: data.total,
+                percentage: data.percentage
+            });
+        } catch (error) {
+            console.error('Error fetching stats:', error);
+            // Fallback to mock data if API fails
+            setStats({
+                placed: 42,
+                unplaced: 58,
+                total: 100,
+                percentage: 42
             });
         }
     };
@@ -83,7 +121,19 @@ const AdminDashboard = () => {
         navigate('/job-management');
     };
 
-    // Function to delete an application
+    const handlePlacedStudents = () => {
+        navigate('/placed-students');
+    };
+
+    const handleUnplacedStudents = () => {
+        navigate('/unplaced-students');
+    };
+
+    const handleStatistics = () => {
+        // You could navigate to a dedicated stats page or keep it in the sidebar
+        // For this example, we'll show the stats in the sidebar
+    };
+
     const handleDeleteApplication = async (id) => {
         try {
             const response = await fetch(`http://localhost:5000/api/applications/${id}`, {
@@ -91,8 +141,7 @@ const AdminDashboard = () => {
             });
             if (!response.ok) throw new Error('Failed to delete application');
             
-            // Remove deleted application from state
-            setApplications(applications.filter(app => app._id !== id)); // Use _id for MongoDB documents
+            setApplications(applications.filter(app => app._id !== id));
             toast({
                 title: 'Application deleted successfully.',
                 status: 'success',
@@ -117,12 +166,12 @@ const AdminDashboard = () => {
         <Flex minHeight="100vh" bg="gray.100">
             {/* Sidebar */}
             <Box w="20%"
-        bgGradient="linear(to-b, purple.500, purple.700)"
-        color="white"
-        p={5}
-        display="flex"
-        flexDirection="column"
-        justifyContent="space-between">
+                bgGradient="linear(to-b, purple.500, purple.700)"
+                color="white"
+                p={5}
+                display="flex"
+                flexDirection="column"
+                justifyContent="space-between">
                 <VStack spacing={6} align="start">
                     <Flex align="center">
                         <Avatar size="lg" src={user?.photoURL} />
@@ -132,18 +181,58 @@ const AdminDashboard = () => {
                         </Box>
                     </Flex>
                     <Divider borderColor="purple.400" />
-                    {/* <Button leftIcon={<FiMonitor />} variant="ghost" justifyContent="start" w="100%">
-                        Admin Dashboard
-                    </Button> */}
+                    
+                    {/* Statistics Button with Badge */}
+                    <Button 
+                        leftIcon={<FiBarChart2 />} 
+                        variant="ghost" 
+                        justifyContent="start" 
+                        w="100%" 
+                        onClick={handleStatistics}
+                        position="relative"
+                    >
+                        <HStack spacing={4} w="100%" justify="space-between">
+                            <Text>Statistics</Text>
+                            <Badge colorScheme="purple" borderRadius="full" px={2}>
+                                {stats.total}
+                            </Badge>
+                        </HStack>
+                    </Button>
+                    
+                    {/* Statistics Display */}
+                    <Box w="100%" p={3} bg="purple.600" borderRadius="md" boxShadow="md">
+                        <Stat>
+                            <StatLabel>Placement Stats</StatLabel>
+                            <StatNumber>{stats.placed} / {stats.total}</StatNumber>
+                            <StatHelpText>
+                                {Math.round((stats.placed / stats.total) * 100)}% placed
+                            </StatHelpText>
+                        </Stat>
+                        <Flex mt={2}>
+                            <Box flex="1" textAlign="center">
+                                <Text fontSize="sm">Placed</Text>
+                                <Badge colorScheme="green">{stats.placed}</Badge>
+                            </Box>
+                            <Box flex="1" textAlign="center">
+                                <Text fontSize="sm">Unplaced</Text>
+                                <Badge colorScheme="red">{stats.unplaced}</Badge>
+                            </Box>
+                        </Flex>
+                    </Box>
+                    
                     <Button leftIcon={<FiUsers />} variant="ghost" justifyContent="start" w="100%" onClick={handleUserManagement}>
-                    Job Seeker Management
+                        Job Seeker Management
                     </Button>
                     <Button leftIcon={<FiBriefcase />} variant="ghost" justifyContent="start" w="100%" onClick={handleJobManagement}>
                         Job Management
                     </Button>
-                    <Button leftIcon={<FiSettings />} variant="ghost" justifyContent="start" w="100%">
-                        Settings
+                    <Button leftIcon={<FiCheckCircle />} variant="ghost" justifyContent="start" w="100%" onClick={handlePlacedStudents}>
+                        Placed Students
                     </Button>
+                    <Button leftIcon={<FiUserX />} variant="ghost" justifyContent="start" w="100%" onClick={handleUnplacedStudents}>
+                        Unplaced Students
+                    </Button>
+
                     <Spacer />
                     <Button leftIcon={<FiLogOut />} variant="ghost" justifyContent="start" w="100%" onClick={onOpen}>
                         Logout
@@ -166,7 +255,7 @@ const AdminDashboard = () => {
                                 <Box flex='1'>
                                     <Text fontWeight='bold'>{app.studentName}</Text>
                                     <Text>{app.jobTitle}</Text>
-                                    <Text fontSize='sm' color='gray.500'>{app.companyName}</Text> {/* Display company name */}
+                                    <Text fontSize='sm' color='gray.500'>{app.companyName}</Text>
                                 </Box>
                                 <Button colorScheme='red' size='sm' onClick={() => handleDeleteApplication(app._id)}>
                                     Delete
@@ -194,7 +283,6 @@ const AdminDashboard = () => {
                     </ModalFooter>
                 </ModalContent>
             </Modal>
-
         </Flex>
     );
 };

@@ -120,9 +120,7 @@ const JobManagement = () => {
                     <Button leftIcon={<FiBriefcase />} variant="ghost" justifyContent="start" w="100%" onClick={() => navigate('/job-management')}>
                         Job Management
                     </Button>
-                    <Button leftIcon={<FiSettings />} variant="ghost" justifyContent="start" w="100%">
-                        Settings
-                    </Button>
+
                     <Spacer />
                     <Button leftIcon={<FiLogOut />} variant="ghost" justifyContent="start" w="100%" onClick={onOpen}>
                         Logout

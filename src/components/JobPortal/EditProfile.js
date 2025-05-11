@@ -11,6 +11,7 @@ import {
     useToast,
     HStack,
     Stack,
+    Skeleton,
 } from '@chakra-ui/react';
 import { auth } from '../Auth/firebase';
 import { updateProfile } from 'firebase/auth';
@@ -26,17 +27,54 @@ const EditProfile = () => {
     const [rollNo, setRollNo] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [imageSizeError, setImageSizeError] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [selectedFile, setSelectedFile] = useState(null);
 
     const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB size limit
 
     useEffect(() => {
-        const user = auth.currentUser;
-        if (user) {
-            console.log("User ID from Firebase on mount:", user.uid); // Log on mount
-            setName(user.displayName || '');
-            setEmail(user.email || '');
-            setAvatar(user.photoURL || null);
-        }
+        const fetchUserProfile = async () => {
+            try {
+                const user = auth.currentUser;
+                if (user) {
+                    // Fetch backend user data
+                    const response = await fetch(`http://localhost:5000/api/update-profile/${user.uid}`);
+                    if (response.ok) {
+                        const userData = await response.json();
+                        setName(userData.displayName || user.displayName || '');
+                        setEmail(userData.email || user.email || '');
+                        setRollNo(userData.rollNo || '');
+                        
+                        // Set profile picture URL (handles both absolute and relative URLs)
+                        if (userData.photoURL) {
+                            const fullUrl = userData.photoURL.startsWith('http') 
+                                ? userData.photoURL 
+                                : `http://localhost:5000${userData.photoURL}`;
+                            setAvatar(fullUrl);
+                        } else {
+                            setAvatar(user.photoURL || null);
+                        }
+                    } else {
+                        // Fallback to Firebase data if backend fetch fails
+                        setName(user.displayName || '');
+                        setEmail(user.email || '');
+                        setAvatar(user.photoURL || null);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching user profile:', error);
+                const user = auth.currentUser;
+                if (user) {
+                    setName(user.displayName || '');
+                    setEmail(user.email || '');
+                    setAvatar(user.photoURL || null);
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUserProfile();
     }, []);
 
     const handleAvatarChange = (e) => {
@@ -44,10 +82,12 @@ const EditProfile = () => {
         if (file) {
             if (file.size > MAX_IMAGE_SIZE) {
                 setImageSizeError('File size exceeds 5MB. Please upload a smaller image.');
+                setSelectedFile(null);
                 return;
             }
 
             setImageSizeError('');
+            setSelectedFile(file);
             setAvatar(URL.createObjectURL(file));
         }
     };
@@ -58,66 +98,65 @@ const EditProfile = () => {
 
         try {
             const user = auth.currentUser;
-
-            if (user) {
-                console.log("User ID from Firebase before update:", user.uid); // Log before update
-                const formData = new FormData();
-                formData.append('userId', user.uid);
-                formData.append('displayName', name);
-                formData.append('email', email);
-                formData.append('rollNo', rollNo);
-
-                const fileInput = document.getElementById('avatar');
-                if (fileInput.files.length > 0) {
-                    const file = fileInput.files[0];
-                    formData.append('avatar', file);
-                }
-
-                const response = await fetch('http://localhost:5000/api/update-profile', {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                console.log("Full response:", response); // Log the full response
-
-                if (!response.ok) {
-                    const errorText = await response.text(); // Get error message from the response
-                    throw new Error(`Failed to update profile in the backend: ${errorText}`);
-                }
-
-                const data = await response.json();
-                console.log("Data from backend:", data); // Log the data
-
-                try {
-                    await updateProfile(user, {
-                        displayName: name,
-                        photoURL: data.photoURL || user.photoURL,
-                    });
-                } catch (firebaseError) {
-                    console.error("Firebase updateProfile error:", firebaseError);
-                    toast({
-                        title: 'Error updating Firebase profile.',
-                        description: firebaseError.message,
-                        status: 'error',
-                        duration: 3000,
-                        isClosable: true,
-                    });
-                }
-
-                setAvatar(data.photoURL || user.photoURL);
-
-                toast({
-                    title: 'Profile updated successfully.',
-                    status: 'success',
-                    duration: 3000,
-                    isClosable: true,
-                });
-
-                navigate(-1);
+            if (!user) {
+                throw new Error('User not authenticated');
             }
+
+            const formData = new FormData();
+            formData.append('userId', user.uid);
+            formData.append('displayName', name);
+            formData.append('email', email);
+            formData.append('rollNo', rollNo);
+
+            if (selectedFile) {
+                formData.append('avatar', selectedFile);
+            }
+
+            const response = await fetch('http://localhost:5000/api/update-profile', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to update profile: ${errorText}`);
+            }
+
+            const data = await response.json();
+            let newPhotoUrl = data.photoURL || avatar;
+
+            // Update Firebase profile
+            try {
+                await updateProfile(user, {
+                    displayName: name,
+                    photoURL: newPhotoUrl,
+                });
+            } catch (firebaseError) {
+                console.error("Firebase update error:", firebaseError);
+                // Continue even if Firebase update fails, as backend update succeeded
+            }
+
+            // Update the avatar URL if a new one was returned
+            if (data.photoURL) {
+                const fullUrl = data.photoURL.startsWith('http') 
+                    ? data.photoURL 
+                    : `http://localhost:5000${data.photoURL}`;
+                setAvatar(fullUrl);
+                newPhotoUrl = fullUrl;
+            }
+
+            toast({
+                title: 'Profile updated successfully',
+                description: 'Your changes have been saved',
+                status: 'success',
+                duration: 3000,
+                isClosable: true,
+            });
+
+            navigate(-1);
         } catch (error) {
             toast({
-                title: 'Error updating profile.',
+                title: 'Error updating profile',
                 description: error.message,
                 status: 'error',
                 duration: 3000,
@@ -127,6 +166,24 @@ const EditProfile = () => {
             setIsSubmitting(false);
         }
     };
+
+    if (loading) {
+        return (
+            <Box p={6} maxWidth="600px" mx="auto" bg="white" boxShadow="md" borderRadius="lg">
+                <Skeleton height="40px" mb={6} />
+                <Stack spacing={4}>
+                    <Skeleton height="100px" borderRadius="full" alignSelf="center" />
+                    <Skeleton height="40px" />
+                    <Skeleton height="40px" />
+                    <Skeleton height="40px" />
+                    <HStack spacing={4} mt={4}>
+                        <Skeleton height="40px" flex={1} />
+                        <Skeleton height="40px" flex={1} />
+                    </HStack>
+                </Stack>
+            </Box>
+        );
+    }
 
     return (
         <Box p={6} maxWidth="600px" mx="auto" bg="white" boxShadow="md" borderRadius="lg">
@@ -138,7 +195,16 @@ const EditProfile = () => {
                 <Stack spacing={4}>
                     <FormControl>
                         <FormLabel htmlFor="avatar">Profile Picture</FormLabel>
-                        <Avatar size="lg" src={avatar} mb={4} />
+                        <Avatar 
+                            size="lg" 
+                            src={avatar} 
+                            mb={4} 
+                            name={name}
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = '/default-profile.png';
+                            }}
+                        />
                         <Input
                             id="avatar"
                             type="file"
@@ -167,6 +233,7 @@ const EditProfile = () => {
                             type="email"
                             value={email}
                             isReadOnly
+                            bg="gray.100"
                         />
                     </FormControl>
 
@@ -185,12 +252,14 @@ const EditProfile = () => {
                             colorScheme="purple"
                             type="submit"
                             isLoading={isSubmitting}
+                            loadingText="Updating..."
                         >
                             Update Profile
                         </Button>
                         <Button
-                            colorScheme="gray"
+                            variant="outline"
                             onClick={() => navigate(-1)}
+                            isDisabled={isSubmitting}
                         >
                             Cancel
                         </Button>

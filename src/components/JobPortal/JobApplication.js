@@ -142,9 +142,7 @@ const JobApplicationDashboard = () => {
                         <Button leftIcon={<FiClipboard />} variant="ghost" justifyContent="start" w="100%" onClick={handleApplicationsNavigation}>
                             Applications
                         </Button>
-                        <Button leftIcon={<FiSettings />} variant="ghost" justifyContent="start" w="100%">
-                            Settings
-                        </Button>
+                       
                     <Spacer />
                     <Button leftIcon={<FiLogOut />} variant="ghost" justifyContent="start" w="100%" onClick={handleLogout}>
                         Logout

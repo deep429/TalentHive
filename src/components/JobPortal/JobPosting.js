@@ -20,11 +20,19 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
+  IconButton,
+  Stack,
+  Collapse,
+  FormControl,
+  FormLabel,
+  Input,
+  Textarea,
+  Select // Import Select for dropdowns
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../Auth/firebase';
 import api from '../../api/api';
-import { FiTrash2, FiLogOut, FiBriefcase, FiUsers } from 'react-icons/fi';
+import { FiTrash2, FiLogOut, FiBriefcase, FiUsers, FiEdit, FiFileText } from 'react-icons/fi';
 
 const MyJobs = () => {
   const toast = useToast();
@@ -33,6 +41,9 @@ const MyJobs = () => {
   const [loading, setLoading] = useState(true);
   const [myJobPostings, setMyJobPostings] = useState([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const [expandedJobId, setExpandedJobId] = useState(null);
+  const [editJobId, setEditJobId] = useState(null);
+  const [editedJobData, setEditedJobData] = useState({});
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -50,8 +61,7 @@ const MyJobs = () => {
   useEffect(() => {
     const fetchMyJobs = async () => {
       try {
-        const response = await api.get('/api/jobs'); // Fetch ALL jobs
-        // Filter jobs on the frontend based on userId
+        const response = await api.get('/api/jobs');
         const filteredJobs = response.data.filter(job => job.userId === user?.uid);
         setMyJobPostings(filteredJobs);
       } catch (error) {
@@ -90,6 +100,48 @@ const MyJobs = () => {
     }
   };
 
+  const handleEditJob = (job) => {
+    setEditJobId(job._id);
+    setEditedJobData({ ...job }); // Make a copy to avoid direct state modification
+  };
+
+  const handleCancelEdit = () => {
+    setEditJobId(null);
+    setEditedJobData({});
+  };
+
+  const handleSaveEdit = async (jobId) => {
+    try {
+      await api.put(`/api/jobs/${jobId}`, editedJobData);
+      setMyJobPostings(prevJobs =>
+        prevJobs.map(job => (job._id === jobId ? { ...job, ...editedJobData } : job))
+      );
+      toast({
+        title: 'Job updated successfully.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      setEditJobId(null);
+    } catch (error) {
+      toast({
+        title: 'Error updating job.',
+        description: error.response?.data?.message || "An unexpected error occurred.",
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditedJobData(prevData => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
   const handleLogout = () => {
     auth.signOut();
     toast({
@@ -109,38 +161,136 @@ const MyJobs = () => {
     navigate('/recruiterdash');
   };
 
+  const goToApplications = () => {
+    navigate('/applications');
+  };
+
+  const toggleJobDetails = (jobId) => {
+    setExpandedJobId(expandedJobId === jobId ? null : jobId);
+  };
+
   if (loading) return <Box>Loading...</Box>;
 
-  // JobItem Component (Moved inside MyJobs)
   const JobItem = ({ job }) => {
-    const isOwner = job.userId === user?.uid; // Check if the current user is the owner
+    const isEditing = editJobId === job._id;
 
     return (
       <Box bg="white" p={5} shadow="md" borderRadius="lg">
-        <Flex justify="space-between" align="start" mb={2}>
-          <Box>
-            <Heading size="md">{job.jobTitle}</Heading>
-            <Text fontSize="sm" color="gray.600">{job.companyName}</Text>
-          </Box>
-        </Flex>
+        {isEditing ? (
+          // Edit Form
+          <VStack spacing={4}>
+            <FormControl>
+              <FormLabel>Job Title</FormLabel>
+              <Input
+                name="jobTitle"
+                value={editedJobData.jobTitle || ''}
+                onChange={handleInputChange}
+              />
+            </FormControl>
+            <FormControl>
+              <FormLabel>Company Name</FormLabel>
+              <Input
+                name="companyName"
+                value={editedJobData.companyName || ''}
+                onChange={handleInputChange}
+              />
+            </FormControl>
+            <FormControl>
+              <FormLabel>Location</FormLabel>
+              <Input
+                name="location"
+                value={editedJobData.location || ''}
+                onChange={handleInputChange}
+              />
+            </FormControl>
+            <FormControl>
+              <FormLabel>Job Type</FormLabel>
+              <Select
+                name="jobType"
+                value={editedJobData.jobType || ''}
+                onChange={handleInputChange}
+              >
+                <option value="Full-time">Full-time</option>
+                <option value="Part-time">Part-time</option>
+                <option value="Contract">Contract</option>
+                <option value="Temporary">Temporary</option>
+                <option value="Internship">Internship</option>
+              </Select>
+            </FormControl>
+            <FormControl>
+              <FormLabel>Salary Range</FormLabel>
+              <Input
+                name="salaryRange"
+                value={editedJobData.salaryRange || ''}
+                onChange={handleInputChange}
+              />
+            </FormControl>
+            <FormControl>
+              <FormLabel>Job Description</FormLabel>
+              <Textarea
+                name="jobDescription"
+                value={editedJobData.jobDescription || ''}
+                onChange={handleInputChange}
+              />
+            </FormControl>
+            <FormControl>
+              <FormLabel>Requirements</FormLabel>
+              <Textarea
+                name="requirements"
+                value={editedJobData.requirements || ''}
+                onChange={handleInputChange}
+              />
+            </FormControl>
+            <HStack justify="flex-end">
+              <Button colorScheme="gray" onClick={handleCancelEdit}>
+                Cancel
+              </Button>
+              <Button colorScheme="blue" onClick={() => handleSaveEdit(job._id)}>
+                Save
+              </Button>
+            </HStack>
+          </VStack>
+        ) : (
+          // Job Display
+          <>
+            <Flex justify="space-between" align="start" mb={2}>
+              <Box flex="1" cursor="pointer" onClick={() => toggleJobDetails(job._id)}>
+                <Heading size="md">{job.jobTitle}</Heading>
+                <Text fontSize="sm" color="gray.600">{job.companyName}</Text>
+              </Box>
+              <HStack>
+                <IconButton
+                  icon={<FiEdit />}
+                  colorScheme="blue"
+                  size="sm"
+                  aria-label="Edit job"
+                  onClick={() => handleEditJob(job)}
+                />
+                <IconButton
+                  icon={<FiTrash2 />}
+                  colorScheme="red"
+                  size="sm"
+                  aria-label="Withdraw job"
+                  onClick={() => handleWithdrawJob(job._id)}
+                />
+              </HStack>
+            </Flex>
 
-        <HStack spacing={3} mt={2}>
-          <Badge colorScheme="purple">{job.location}</Badge>
-          <Badge colorScheme="blue">{job.jobType}</Badge>
-          <Badge colorScheme="green">{job.salaryRange}</Badge>
-        </HStack>
+            <HStack spacing={3} mt={2}>
+              <Badge colorScheme="purple">{job.location}</Badge>
+              <Badge colorScheme="blue">{job.jobType}</Badge>
+              <Badge colorScheme="green">{job.salaryRange}</Badge>
+            </HStack>
 
-        {isOwner && ( // Conditionally render the button
-          <Button
-            leftIcon={<FiTrash2 />}
-            colorScheme="red"
-            size="sm"
-            mt={2}
-            onClick={() => handleWithdrawJob(job._id)}
-            aria-label="Withdraw job"
-          >
-            Withdraw
-          </Button>
+            <Collapse in={expandedJobId === job._id} animateOpacity>
+              <Box mt={4} p={4} bg="gray.50" borderRadius="md">
+                <Text fontWeight="bold">Job Description:</Text>
+                <Text mt={2}>{job.jobDescription}</Text>
+                <Text fontWeight="bold" mt={4}>Requirements:</Text>
+                <Text mt={2}>{job.requirements}</Text>
+              </Box>
+            </Collapse>
+          </>
         )}
       </Box>
     );
@@ -148,7 +298,7 @@ const MyJobs = () => {
 
   return (
     <Flex minHeight="100vh" bg="gray.100">
-      {/* Sidebar */}
+      {/* Enhanced Sidebar */}
       <Box
         w="20%"
         h="100vh"
@@ -174,25 +324,43 @@ const MyJobs = () => {
           <Button leftIcon={<FiBriefcase />} variant="ghost" justifyContent="start" w="100%" onClick={goToRecruiterDashboard}>
             Dashboard
           </Button>
+          <Button leftIcon={<FiUsers />} variant="ghost" justifyContent="start" w="100%" onClick={goToApplications}>
+            View Applications
+          </Button>
+          <Button leftIcon={<FiFileText />} variant="ghost" justifyContent="start" w="100%" onClick={() => {}}>
+            My Postings
+          </Button>
         </VStack>
-        <Button leftIcon={<FiLogOut />} variant="ghost" justifyContent="start" w="100%" onClick={onOpen} aria-label="Logout">
-          Logout
-        </Button>
+        <VStack spacing={4} align="start">
+          <Button leftIcon={<FiLogOut />} variant="ghost" justifyContent="start" w="100%" onClick={onOpen}>
+            Logout
+          </Button>
+        </VStack>
       </Box>
 
       {/* Main Content */}
       <Box w="80%" p={6} ml="20%">
-        <Heading mb={6} color="purple.700">My Job Postings</Heading>
-        <VStack spacing={4} align="stretch">
+        <Flex justify="space-between" align="center" mb={6}>
+          <Heading color="purple.700">My Job Postings</Heading>
+          <Badge colorScheme="purple" fontSize="lg" px={3} py={1}>
+            {myJobPostings.length} {myJobPostings.length === 1 ? 'Job' : 'Jobs'}
+          </Badge>
+        </Flex>
+
+        <Stack spacing={4}>
           {myJobPostings.length === 0 ? (
-            <Text>No job postings available.</Text>
+            <Box textAlign="center" p={10} bg="white" borderRadius="lg" shadow="sm">
+              <Text fontSize="xl" mb={4}>You haven't posted any jobs yet</Text>
+            </Box>
           ) : (
             myJobPostings.map((job) => (
               <JobItem key={job._id} job={job} />
             ))
           )}
-        </VStack>
+        </Stack>
       </Box>
+
+      {/* Logout Confirmation Modal */}
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>

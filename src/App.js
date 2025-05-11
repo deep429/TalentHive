@@ -17,6 +17,8 @@ import JobManagement from './components/JobPortal/JobManagement';
 import JobApplication from './components/JobPortal/JobApplication';
 import MyJobs from './components/JobPortal/JobPosting';
 import Applications from './components/JobPortal/JobApplicationRecru';
+import PlacedStudents from './components/JobPortal/PlacedStudents';
+import UnplacedStudents from './components/JobPortal/UnplacedStudents';
 import WebFont from 'webfontloader';
 import { Routes, Route } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -54,6 +56,8 @@ function App() {
         <Route path="/job-application" element={<JobApplication />} />
         <Route path="/my-jobs" element={<MyJobs />} />
         <Route path="/applications" element={<Applications />} />
+        <Route path="/placed-students" element={<PlacedStudents />} />
+        <Route path="/unplaced-students" element={<UnplacedStudents />} />
 
       </Routes>
     </GoogleOAuthProvider>
